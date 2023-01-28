@@ -1,4 +1,4 @@
--- take various revelvant product information by joining the product history table with
+-- take various revelvant product information by joining the product api_history table with
 -- products, manufacturer, suppliers, product classifications and categories table
 
 
