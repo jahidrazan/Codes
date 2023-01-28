@@ -15,5 +15,5 @@ WHERE
     -- filtering out the parent product ids 
     product_id NOT IN (SELECT DISTINCT(parent_product_id) FROM `hbl-online.api.product_set_items`) 
 
-    -- exclude the product have less tha 0 stock
+    -- exclude the products that have less than 0 stock
     AND stock_magento >= 0
