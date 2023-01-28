@@ -1,3 +1,6 @@
+-- take various revelvant product information by joining the product table with
+-- manufacturer, suppliers, product classifications and categories table
+
 SELECT      DISTINCT p.product_id                          AS PRODUCT_ID, 
             date, 
             m.name                                         AS BRAND,  
@@ -53,13 +56,13 @@ WHERE
       -- exclude low sales products that we are not purchasing 
       AND pc42.mean >= 0.05
 
-      -- exluce hidden products
+      -- exluce hidden products items since we do not purchase them 
       AND products.status != 'hidden'
 
-      -- exclude super sales items
+      -- exclude super sales items items since we do not purchase them 
       AND p.product_id NOT IN (SELECT product_id FROM `hbl-online.purchase_queries.super_sale_products_for_purchase`)
      
-       -- exclude EOL items 
+       -- exclude Eng Of Life items since we do not purchase them 
       AND s.name != 'EOL / Discontinued'
 
       -- last 90 days history only
