@@ -19,33 +19,46 @@ SELECT      DISTINCT p.product_id                          AS PRODUCT_ID,
              p.cost_net, 
              pc.label                                      AS SALES_CLASS_YEAR
 
+-- take the product history table 
 FROM `hbl-online.api_history.products` p
 
 
-
+-- join the product history table with products table
 LEFT JOIN `hbl-online.api.products` products 
 ON p.product_id = products.product_id 
 
+-- join the product table with categories table
+-- to get the category information of a product
 
 LEFT JOIN `hbl-online.api.categories` AS main_categories
 ON main_categories.category_id = products.main_category_id
 
+-- join the product table with categories table
+-- to get the root category information of a product
 
 LEFT JOIN `hbl-online.api.categories` AS root_categories
 ON root_categories.category_id = main_categories.root_category_id
 
+-- join the product table with manufacturer table
+-- to get the name of the manufacturer information of a product
+
 LEFT JOIN `hbl-online.api.manufacturers` m
 ON products.manufacturer_id = m.manufacturer_id
 
-
+-- join the product table with manufacturer table
+-- to get the name of the default supplier information of a product
 
 LEFT JOIN `hbl-online.api.suppliers` s
 ON products.default_supplier_id = s.supplier_id
 
+-- join the product table with product classification table
+-- to get the product classification information for the duration of year
 
 LEFT JOIN `hbl-online.api.product_classifications` pc
 ON pc.product_id = p.product_id AND pc.period = 'year' AND pc.type = 'sales'
 
+-- join the product table with product classification table
+-- to get the product classification information for the duration of last 42 days
 
 LEFT JOIN `hbl-online.api.product_classifications` pc42
 ON pc42.product_id = p.product_id AND pc42.period = '42_days' AND pc.type = 'sales'
