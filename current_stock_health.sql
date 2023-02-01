@@ -1,4 +1,6 @@
 -- this code is used to track current stock health 
+-- table t1 takes the product ids (excludes the parent product ids and excludes products that have stock_magento <0 ), and other product related information
+-- by joining the product table with other associated api tables
 
 with t1 as (
   
