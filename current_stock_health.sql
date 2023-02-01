@@ -140,14 +140,16 @@ SELECT *,
         ELSE 0 
         END  AS SUM_OF_0_30_DGN,
 
-
+      
       CASE 
         WHEN STOCK_VALUE = 0 THEN 0 
-
+        
+        -- when the estimated stock lasts 30-90 days : takes the value that worth 30-90 days of sales
         WHEN STOCK_VALUE >0 AND AVG_SALES_IN_STOCK_42_DAYS >0 AND  (ESTIMATED_STOCK_DAYS > 30 AND ESTIMATED_STOCK_DAYS < 91)   
         
               THEN ((ESTIMATED_STOCK_DAYS-30) * STOCK_VALUE)  / ESTIMATED_STOCK_DAYS 
-
+       
+        -- when the estimated stock lasts more than 90 days: takes the value that worth 30 to 90 days of sales
         WHEN STOCK_VALUE >0 AND (AVG_SALES_IN_STOCK_42_DAYS >0 AND  ESTIMATED_STOCK_DAYS > 90 )   
               THEN ((90-30) * STOCK_VALUE)  / ESTIMATED_STOCK_DAYS 
               
@@ -176,11 +178,14 @@ SELECT *,
 
       CASE 
         WHEN STOCK_VALUE = 0 THEN 0 
+  
         WHEN STOCK_VALUE >0 AND (AVG_SALES_IN_STOCK_42_DAYS >0 AND ESTIMATED_STOCK_DAYS > 365)  THEN ((ESTIMATED_STOCK_DAYS-365) * STOCK_VALUE)  / ESTIMATED_STOCK_DAYS 
         ELSE 0 
         END AS MORE_THAN_365_DGN,
 
       CASE 
+  
+        -- when the stock has no sales in the last 365 days
         WHEN STOCK_VALUE >0 AND (AVG_SALES_IN_STOCK_42_DAYS = 0 AND AVG_SALES_IN_STOCK_365_DAYS = 0) THEN STOCK_VALUE 
         ELSE 0 
         END  AS SUM_OF_NON_MOVING_365_DAYS
