@@ -1,5 +1,8 @@
--- take various revelvant product information by joining the product table with
--- manufacturer, suppliers, product classifications and categories table
+-- The code is used to show the out of stock percentage per sales class trend over the 90 days period
+-- To gather the revelvant product information required for the analysis 
+-- product history table that contains the historical record of stock values has been joined 
+-- with by joining the product table, manufacturer, suppliers, product classifications and categories table
+-- class D products and products with avg daily sales of last 42 days <0.05 have been excluded from this analysis
 
 SELECT      DISTINCT p.product_id                          AS PRODUCT_ID, 
             date, 
@@ -11,8 +14,7 @@ SELECT      DISTINCT p.product_id                          AS PRODUCT_ID,
 
                   ELSE p.stock_magento END                 AS STOCK_MAGENTO, 
 
-            CASE WHEN p.stock_magento >0 THEN 'in stock' 
-                   ELSE 'out of stock' END                 AS STOCK_STATUS,
+
 
              p.cost_net, 
              pc.label                                      AS SALES_CLASS_YEAR
@@ -56,13 +58,13 @@ WHERE
       -- exclude low sales products that we are not purchasing 
       AND pc42.mean >= 0.05
 
-      -- exluce hidden products items since we do not purchase them 
+      -- exluce hidden products
       AND products.status != 'hidden'
 
-      -- exclude super sales items items since we do not purchase them 
+      -- exclude super sales items
       AND p.product_id NOT IN (SELECT product_id FROM `hbl-online.purchase_queries.super_sale_products_for_purchase`)
      
-       -- exclude Eng Of Life items since we do not purchase them 
+       -- exclude EOL items 
       AND s.name != 'EOL / Discontinued'
 
       -- last 90 days history only
