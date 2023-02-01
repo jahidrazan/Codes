@@ -42,7 +42,10 @@ with t1 as (
                     p.cost_net                                                          AS PER_UNIT_COST,
 
                     p.stock_magento                                                     AS STOCK_MAGENTO,
-
+                   
+                    -- ESTIMATED_STOCK_DAYS is calculated by dividing the 
+                    -- stock magento with the last 42 days avg sales in stock
+                
                     CASE WHEN pc42_in_stock.mean <= 0 THEN 0
                          ELSE p.stock_magento / pc42_in_stock.mean
                          END                                                            AS ESTIMATED_STOCK_DAYS, 
@@ -106,53 +109,14 @@ WHERE stock_magento >0
 GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
 ORDER BY  STOCK_VALUE DESC),
 
+-- t2 divides the stock into different basket 
+-- as per the estimated stock days
 
 t2 as (
 
-  SELECT product_id,
-
-                      
-        SUM(ltm.qty)                                                        AS QTY_SOLD,
-
-        SUM(line_total_ex_vat)                                              AS TOTAL_REVENUE,
-        SUM(margin_total_net)                                               AS TOTAL_MARGIN,
-
-
-        CASE WHEN SUM(line_total_ex_vat) > 0 THEN
-        
-          ROUND(100*SUM(margin_total_net)/ SUM(line_total_ex_vat),2) 
-          ELSE 0 END                                                         AS GROSS_MARGIN_PERCENTAGE
-
-       FROM `hbl-online.gcp_sql_bi.ORDER_DATA_LM` ltm 
-      
-       WHERE ltm.product_id in (SELECT product_id from t1) 
-             AND EXTRACT(date from order_date) >= DATE_SUB(current_date(), INTERVAL 29 DAY) 
-
-       GROUP BY 1
-
-
-
-),
-
-t3 as (SELECT t1.*, 
-
-       CASE WHEN t2.QTY_SOLD IS NULL THEN 0 ELSE t2.QTY_SOLD END                              AS QTY_SOLD,
-
-       CASE WHEN t2.TOTAL_REVENUE IS NULL THEN 0 ELSE t2.TOTAL_REVENUE END                    AS TOTAL_REVENUE ,
-
-       CASE WHEN t2.TOTAL_MARGIN IS NULL THEN 0 ELSE t2.TOTAL_MARGIN END                      AS TOTAL_MARGIN,
-       CASE WHEN t2.GROSS_MARGIN_PERCENTAGE IS NULL THEN 0
-            ELSE t2.GROSS_MARGIN_PERCENTAGE END                                               AS GROSS_MARGIN_PERCENTAGE
-
-FROM t1
-LEFT JOIN t2
-ON t1.PRODUCT_ID = t2.product_id),
-
-
-t4 as (
-
 SELECT *,
-
+      -- the amount of stock value that has no avg sales in stock in the last 42 days 
+      -- but has avg sales in stock in the last 365 days
       CASE 
         WHEN STOCK_VALUE = 0 THEN 0 
           
@@ -161,13 +125,16 @@ SELECT *,
         ELSE 0 
         END     AS SUM_OF_NON_MOVING_42_DAYS,
 
+     
 
       CASE 
-
-        WHEN STOCK_VALUE = 0 THEN 0 
         
+        WHEN STOCK_VALUE = 0 THEN 0 
+  
+        -- when the estimated stock lasts 30 days: all stock value is here
         WHEN STOCK_VALUE >0 AND AVG_SALES_IN_STOCK_42_DAYS >0 AND  ESTIMATED_STOCK_DAYS < 31   THEN STOCK_VALUE 
-
+        
+         -- when the estimated stock lasts more than 30 days: takes the value that worth 30 days of sales
         WHEN STOCK_VALUE >0 AND AVG_SALES_IN_STOCK_42_DAYS >0 AND  ESTIMATED_STOCK_DAYS > 30   THEN (30 * STOCK_VALUE)  / ESTIMATED_STOCK_DAYS 
         
         ELSE 0 
@@ -218,8 +185,8 @@ SELECT *,
         ELSE 0 
         END  AS SUM_OF_NON_MOVING_365_DAYS
       
-FROM t3
+FROM t1
 ORDER BY STOCK_VALUE DESC)
 
 SELECT *
-FROM t4
+FROM t2
