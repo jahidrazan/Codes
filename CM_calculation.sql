@@ -17,6 +17,7 @@ with t1 as (SELECT  order_id,
                     website_id, 
                     channel, 
                     shipping_method,
+                    ltm.status,
 
                     -- BOL has variable and fixed marketing cost 
                     
@@ -73,7 +74,7 @@ ON pcyr.product_id = ltm.product_id AND pcyr.period = 'year' AND pcyr.type = 'sa
 
 WHERE ltm.product_id not in (-11, -12) 
       AND order_type = 'sales_order'
-      AND ltm.status >= 2
+      AND ltm.status >= 1
       AND qty > 0
 
       -- take all the orders from 2022 onward
