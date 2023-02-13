@@ -105,7 +105,7 @@ t2  as (SELECT t1.*,
 t3 as (SELECT      DISTINCT (order_id)                                                    as order_id,
 
                    SUM((CASE WHEN product_id > 0 THEN 1 
-                                            ELSE 0 END))                               as order_line,
+                                            ELSE 0 END))                                  as order_line,
                    
                    
                    
