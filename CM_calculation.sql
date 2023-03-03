@@ -1,9 +1,8 @@
 -- take all the columns from order data ltm
 -- add marketing cost for BOL and ManoMano orders
 
-with t1 as (SELECT  order_id, 
+WITH         t1 as (SELECT  order_id, 
                     EXTRACT (date from order_date) as order_date,
-                    EXTRACT (week from order_date) as week_nr,
                     ltm.product_id,
                     p.name_nl                      as product_name_nl,
                     pcyr.label                     as sales_class,
@@ -14,48 +13,76 @@ with t1 as (SELECT  order_id,
                     line_total_ex_vat, 
                     margin_total_net, 
                     qty, 
-                    website_id, 
+                    ltm.website_id, 
                     channel, 
+
+                    CASE WHEN ltm.website_id = 3  THEN 'ES'
+                         WHEN ltm.website_id = 4  THEN 'DE'
+                         WHEN ltm.website_id = 6  THEN 'BE'
+                         WHEN ltm.website_id = 7  THEN 'NL'
+                         WHEN ltm.website_id = 8  THEN 'FR'
+                         WHEN ltm.website_id = 14 THEN 'GCNL VWW'
+                         WHEN ltm.website_id = 15 THEN 'FXBE VWW'
+                         END                       as country,
+
                     shipping_method,
                     ltm.status,
 
                     -- BOL has variable and fixed marketing cost 
                     
-                        -- For the fixed commission the standard rule is: 
-                        -- Selling price (incl. VAT) < €10 - the fixed commission is 0,20 (ex VAT). 
-                        -- Selling price (incl. VAT) > €10 and < €20 - the fixed commission is € 0,40 (ex VAT)
-                        -- Selling price (incl. VAT) > €20 - the fixed commission is €0,83 (ex VAT)
+                    -- For the fixed commission the standard rule is: 
+                    -- Selling price (incl. VAT) < €10 - the fixed commission is 0,20 (ex VAT). 
+                    -- Selling price (incl. VAT) > €10 and < €20 - the fixed commission is € 0,40 (ex VAT)
+                    -- Selling price (incl. VAT) > €20 - the fixed commission is €0,85 (ex VAT)
+                   
 
+                   -- fixed cost is only assigned when the channel is BOL and product_id > 0
 
-                    CASE WHEN channel = "BOL" THEN 
+                  CASE  WHEN (channel = "BOL" AND ltm.product_id >0) THEN 
 
-                              CASE WHEN ABS(line_total/qty) <= 10 THEN .20 * qty
-                                   WHEN ABS(line_total/qty) >= 10 AND  ABS(line_total/qty) <= 20 THEN .40*qty
-                                   WHEN ABS(line_total/qty) > 20 THEN .83*qty
-                                   END 
+                              CASE  WHEN  ABS(line_total/qty) <= 10 THEN .20 * qty
+
+                                WHEN ABS(line_total/qty) >= 10 AND  ABS(line_total/qty) <= 20 THEN .40*qty
+
+                                WHEN ABS(line_total/qty) > 20 THEN .85*qty
+
+                              END 
                         ELSE 0 
-                    END AS bol_fixed_cost_per_product,
+                    
+                  END AS bol_fixed_cost_per_product,
 
-                  -- add variable cost per product for bol orders
-                    CASE WHEN channel = "BOL" THEN 
-                              ROUND(line_total * bc.commission_percentage,2) 
-                        ELSE 0 
+                  -- add variable cost per product for bol orders when product_id > 0
+
+                    CASE  WHEN (channel = "BOL" AND ltm.product_id >0) THEN ROUND(line_total * bc.commission_percentage,2) 
+                          ELSE 0 
                     END AS bol_variable_cost_per_product,
                   
-                  -- if the product is from the 6 fixed brands ManoMano charges 12% commission 
-                  CASE WHEN channel = "ManoMano" THEN 
-                        CASE WHEN  brand in ('DeWALT', 'Makita', 'Metabo', 'Bosch', 'HiKOKI', 'Hitachi') THEN ROUND(line_total_ex_vat * 0.12,2)
+                  -- if the product is from one of the 6 brands ManoMano charges 12% commission 
+                  CASE WHEN (channel = "ManoMano" AND ltm.product_id >0) THEN 
+                        
+                        CASE WHEN  brand in ('DeWALT', 'Makita', 'Metabo', 'Bosch', 'HiKOKI', 'Hitachi') 
+                        
+                            THEN ROUND(line_total_ex_vat * 0.12,2)
 
-                        -- else ManoMano charges 13% commission
+                            -- else ManoMano charges 13% commission
                             ELSE ROUND(line_total_ex_vat * 0.13,2)
+
                             END 
-                        ELSE 0 END AS ManoMano_marketing_cost_per_product,
+                        ELSE 0 
+                        
+                        END AS ManoMano_marketing_cost_per_product,
 
                   
                   -- Amazon has a marketing cost of 13.48% 
 
-                  CASE WHEN channel = "Amazon" THEN ROUND(line_total_ex_vat * 0.1348,2)
-                       ELSE 0 END AS amazon_marketing_cost_per_product
+                  CASE 
+                       WHEN (channel = "Amazon" AND ltm.product_id >0) THEN 
+                       
+                       ROUND(line_total_ex_vat * 0.1348,2)
+                       
+                       ELSE 0 
+                       
+                  END AS Amazon_marketing_cost_per_product
 
 
 
@@ -81,10 +108,10 @@ WHERE ltm.product_id not in (-11, -12)
       AND EXTRACT (year from order_date) >= 2022 
 
      --  select channels
-      AND Channel in ('GCNL', 'FXBE', 'FXES', 'FXFR', 'FXDE', 'BOL', 'ManoMano', 'Showroom', 'Amazon')
+      AND Channel in ('GCNL', 'FXBE', 'FXES', 'FXFR', 'FXDE', 'BOL', 'ManoMano', 'Showroom', 'Amazon', 'VWW')
 
-      -- select website: 3: ES, 4: DE, 6: BE, 7: NL, 8: FR
-      AND website_id in (3,4,6,7,8)
+      -- select website: 3: ES, 4: DE, 6: BE, 7: NL, 8: FR, 14:VWW-NL, 15:VWW-BE
+      AND ltm.website_id in (3,4,6,7,8,14,15)
       
       
       ),
@@ -97,6 +124,7 @@ t2  as (SELECT t1.*,
       ELSE 0 END AS is_coll_product
       FROM t1),
 
+      
 -- t3 aggregates number of order lines per order (count of discint product ids), 
 -- total revenue per order
 -- and checks if the product is a transmission colli product
@@ -109,12 +137,13 @@ t3 as (SELECT      DISTINCT (order_id)                                          
                    
                    
                    
-                   -- total_revenue_for_cost_share is used to distribute the costs
-                   -- as the qty >0 the revenue should not be negative
-                   -- however, if there is a strange case like (order id: 3106724) 
-                   -- the product does not get cost share
-                   -- also the negative ids get no share of WH cost, shipping cost, CS cost,  marketing cost and RMA related shipping cost
-                   -- negative ids however get a share of the payment cost, RMA cost 
+                   -- total_revenue_for_cost_share is used to distribute the costs linearly among the products
+                   -- the higher revenue cost get the larger share of the cost
+                   -- However, if there is a strange case (like order id: 3106724) where one of the product (product id 218330) 
+                   -- has a negative line_total_ex_vat, the product does not get cost share
+                   
+                   -- Negative ids get no share of: WH cost, shipping cost, CS cost,  Marketing cost and RMA related shipping cost
+                   -- Negative ids however get a share of the payment cost, RMA cost 
 
 
                    SUM(CASE WHEN (product_id >0 AND line_total_ex_vat >0) 
@@ -174,7 +203,7 @@ SELECT t3.order_id,
 
                 ELSE 7.00
             END
-    END as shipping_cost_per_order
+    END as shipping_cost_per_shipping_method
 
 
 
@@ -189,7 +218,6 @@ FROM t3
 
 t5 as (SELECT  t1.order_id,
                t1.order_date,
-               t1.week_nr,
                t1.product_id,
                t1.product_name_nl,
                t1.sales_class,
@@ -198,55 +226,78 @@ t5 as (SELECT  t1.order_id,
                t1.root_category,
                qty, 
                website_id, 
+               status,
                channel, 
+               country,
                shipping_method, 
-               shipping_cost_per_order,
+               shipping_cost_per_shipping_method,
                order_line,
                line_total,
                line_total_ex_vat, 
                margin_total_net, 
                total_revenue_for_cost_share,
+
                
-                CASE    WHEN channel = 'BOL' THEN ROUND((bol_fixed_cost_per_product + bol_variable_cost_per_product),2)
+               CASE WHEN product_id >0 AND order_line > 1 THEN 'Multi-line'
+                    WHEN product_id >0 AND order_line = 1 AND qty > 1 THEN 'Single-line plus'
+                    WHEN product_id >0 AND order_line = 1 AND qty = 1 THEN 'Single-line'
+                    ELSE 'NA'
+                END AS order_line_details,
+               
+               CASE     WHEN channel = 'BOL' THEN ROUND((bol_fixed_cost_per_product + bol_variable_cost_per_product),2)
                         WHEN channel = 'ManoMano' THEN ManoMano_marketing_cost_per_product
                         WHEN channel = 'Amazon' THEN amazon_marketing_cost_per_product
-                        END as mktplace_marketing_cost
+
+               END AS mktplace_marketing_cost
 
        FROM t1
        LEFT JOIN t4
        ON t1.order_id = t4.order_id),
 
 
--- these are orders like rma, that's why they have been excluded
-t6 as (SELECT *
-FROM t5
-WHERE total_revenue_for_cost_share != 0),
 
--- t7 takes 
 
-t7 as (SELECT *,
+
+-- t6 takes all the rows from t5 and adds revennue applicable for payment cost
+-- and calculates the cost fraction: used to distribute the payment cost linerarly among the 
+-- products:  
+
+t6 as (SELECT *,
        
-       -- for BOL, ManoMano and Amazon no payment cost
-       CASE WHEN channel in ('BOL', 'ManoMano', 'Amazon') THEN 0 
+      -- For marketplaces like BOL, ManoMano and Amazon no payment cost
+      -- Website id 14: VWW-BE and 15: VWW-NL get a cost as per the rate of BE and NL respectively 
+      -- If the line_total_ex_vat <0 such as for product_id -4 : no payment cost is assigned
+      -- If the line_total_ex_vat > 0 for a product: then the product revenue is applicable for the payment cost
        
-      -- if the revenue is less than 0 no payment cost
-      -- if the revenue is >0 then the revenue is applicable for the payment cost
+      CASE WHEN channel in ('BOL', 'ManoMano', 'Amazon') THEN 0 
+       
+            ELSE  CASE WHEN line_total_ex_vat < 0 THEN 0 
+                      ELSE line_total_ex_vat 
+                  END
 
-            ELSE CASE WHEN line_total_ex_vat < 0 THEN 0 
-                 ELSE line_total_ex_vat END
-        END revenue_applicable_for_payment_cost,
+      END AS revenue_applicable_for_payment_cost,
       
-      -- if the product id is 0 then the cost share fraction is 0
-      -- else the ratio of individual product revenue and total revenue is used for calculating cost fraction
-      -- this cost fraction is used to distribute cost 
+      -- if the product id<0:  then the cost share fraction is 0
+      -- else the ratio of individual product revenue to total revenue is used for calculating cost fraction
+      -- this cost fraction is used to distribute payment cost 
+      -- all the cost fraction for a single orders adds up to 1: the check is done to make sure 
+      -- the linear distribution of cost is accurate
       
-       CASE WHEN product_id <0 THEN 0
-            ELSE 
-               CASE WHEN line_total_ex_vat < 0 THEN 0 
-                    ELSE (line_total_ex_vat / total_revenue_for_cost_share) END 
+      CASE WHEN product_id <0 THEN 0
             
-       END as cost_fraction
-FROM t6 )
+            ELSE 
+                 CASE WHEN line_total_ex_vat < 0 THEN 0 
+                      ELSE (line_total_ex_vat / total_revenue_for_cost_share) 
+                  END 
+            
+      END AS cost_fraction
+
+
+
+FROM t5
+
+-- these are orders like rma, that's why they have been excluded
+WHERE total_revenue_for_cost_share != 0 )
 
 SELECT *
-FROM t7
+FROM t6
