@@ -64,15 +64,21 @@ LEFT JOIN `hbl-online.api.product_classifications` pc42
 ON pc42.product_id = p.product_id AND pc42.period = '42_days' AND pc.type = 'sales'
 
 
+
 WHERE 
+
       -- exclude parent product ids
       p.product_id NOT IN (SELECT DISTINCT(parent_product_id) FROM `hbl-online.api.product_set_items`) 
 
       -- exclude low sales products that we are not purchasing 
       AND pc42.mean >= 0.05
 
+
       -- exluce hidden products
       AND products.status != 'hidden'
+
+      -- exclude automatisch uitschaklen items
+      AND p.product_id NOT IN (SELECT product_id FROM `hbl-online.purchase_queries.automatisch_uitschakelen_purchase`)
 
       -- exclude super sales items
       AND p.product_id NOT IN (SELECT product_id FROM `hbl-online.purchase_queries.super_sale_products_for_purchase`)
