@@ -30,7 +30,7 @@ SELECT product_id                           as product_id,
 
                   FROM `hbl-online.gcp_sql_bi.ORDER_DATA_LTM` ltm
 
-                        WHERE ltm.status >= 2 
+                        WHERE ltm.status = 5
                         AND ltm.year_number  = 2022 
                         AND ltm.order_type in ('sales_order')
                         AND website_id in (7, 8)
@@ -63,7 +63,7 @@ SELECT product_id                           as product_id,
                   INNER JOIN `hbl-online.api.product_set_items` psi 
                   ON ltm.product_id = psi.parent_product_id
 
-                  WHERE ltm.status >= 2 
+                  WHERE ltm.status = 5 
                         AND ltm.year_number  = 2022 
                         AND ltm.line_type = 'COMPOSITION'
                         AND ltm.order_type in ('sales_order')
